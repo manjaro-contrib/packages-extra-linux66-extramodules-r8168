@@ -10,50 +10,58 @@ _extramodules=extramodules-6.6-MANJARO
 pkgname=$_linuxprefix-r8168
 _pkgname=r8168
 pkgver=8.051.02
-pkgrel=0.1
+pkgrel=0.2
 pkgdesc="A kernel module for Realtek 8168 network cards"
+arch=('x86_64')
 url="http://www.realtek.com.tw"
 license=("GPL")
-arch=('x86_64')
+groups=("$_linuxprefix-extramodules")
 depends=('glibc' "$_linuxprefix")
 makedepends=("$_linuxprefix-headers")
 provides=("$_pkgname=$pkgver")
-groups=("$_linuxprefix-extramodules")
-source=("https://github.com/mtorromeo/r8168/archive/refs/tags/$pkgver.tar.gz"
+source=("https://github.com/mtorromeo/r8168/archive/$pkgver/$_pkgname-$pkgver.tar.gz"
+        "https://github.com/mtorromeo/r8168/releases/download/$pkgver/$_pkgname-$pkgver.tar.gz.asc"
         'linux61.patch'
         'linux65.patch')
 sha256sums=('76f1c6f0b273d6a31bdb3e98c39a54f50a65766b99d485f9b4ddeda30dcd11d8'
+            'SKIP'
             'b43a2ec8270124afe6fa23fafc1be156779e9a0d47db22e1583b60891bd286d5'
             'bc3ff8958d22ed85dc0f88fe48a5c4148c8d6b9dfbe481a7e791c7780dd542f0')
-
-install=$_pkgname.install
+validpgpkeys=('0CADAACF70F64C654E131B3111675C743429DDEF') # Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
 
 prepare() {
-    cd "$_pkgname-$pkgver"
-    patch -p1 -i ../linux61.patch
-    patch -p1 -i ../linux65.patch
+  cd "$_pkgname-$pkgver"
+  patch -p1 -i ../linux61.patch
+  patch -p1 -i ../linux65.patch
 }
 
 build() {
-    _kernver="$(cat /usr/lib/modules/$_extramodules/version || true)"
+  _kernver="$(cat /usr/lib/modules/$_extramodules/version || true)"
 
-    cd "$_pkgname-$pkgver"
+  cd "$_pkgname-$pkgver"
 
-    # avoid using the Makefile directly -- it doesn't understand
-    # any kernel but the current.
+  # avoid using the Makefile directly -- it doesn't understand
+  # any kernel but the current.
 
-    make -C /usr/lib/modules/$_kernver/build \
-      M="$srcdir/$_pkgname-$pkgver/src" \
-      EXTRA_CFLAGS="-DCONFIG_R8168_NAPI -DCONFIG_R8168_VLAN -DCONFIG_ASPM -DENABLE_S5WOL -DENABLE_EEE" \
-      modules
+  make -C /usr/lib/modules/$_kernver/build M="$srcdir/$_pkgname-$pkgver/src" \
+    ENABLE_USE_FIRMWARE_FILE=y \
+    CONFIG_R8168_NAPI=y \
+    CONFIG_R8168_VLAN=y \
+    CONFIG_ASPM=y \
+    ENABLE_S5WOL=y \
+    ENABLE_EEE=y \
+    modules
 }
 
 package() {
-    cd "$_pkgname-$pkgver/src"
-    install -D -m 644 $_pkgname.ko "$pkgdir/usr/lib/modules/$_extramodules/$_pkgname.ko"
+  cd "$_pkgname-$pkgver"
+  install -Dm644 src/*.ko -t "$pkgdir/usr/lib/modules/$_extramodules/"
+  find "$pkgdir" -name '*.ko' -exec strip {} +
+  find "$pkgdir" -name '*.ko' -exec xz {} +
 
-    # set the kernel we've built for inside the install script
-    sed -i -e "s/EXTRAMODULES=.*/EXTRAMODULES=${_extramodules}/g" "${startdir}/${_pkgname}.install"
+  echo "blacklist r8169" | \
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/modprobe.d/$pkgname.conf"
 
-    find "$pkgdir" -name '*.ko' -exec gzip -9 {} \;
+  # set the kernel we've built for inside the install script
+  sed -i -e "s/EXTRAMODULES=.*/EXTRAMODULES=${_extramodules}/g" "${startdir}/${_pkgname}.install"
 }
