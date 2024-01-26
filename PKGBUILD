@@ -55,7 +55,4 @@ package() {
 # We'll let mhwd-db handle blacklisting for now
 #  echo "blacklist r8169" | \
 #    install -Dm644 /dev/stdin "$pkgdir/usr/lib/modprobe.d/$pkgname.conf"
-
-  # set the kernel we've built for inside the install script
-  sed -i -e "s/EXTRAMODULES=.*/EXTRAMODULES=${_kernver}/extramodules/g" "${startdir}/${_pkgname}.install"
 }
