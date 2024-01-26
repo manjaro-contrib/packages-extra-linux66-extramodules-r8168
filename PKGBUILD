@@ -6,7 +6,7 @@
 # Filip <fila pruda com>, Det <nimetonmaili(at)gmail>
 
 _linuxprefix=linux66
-_extramodules=extramodules-6.6-MANJARO
+_kernver="$(cat /usr/src/${_linuxprefix}/version)"
 pkgname=$_linuxprefix-r8168
 _pkgname=r8168
 pkgver=8.052.01
@@ -30,7 +30,6 @@ prepare() {
 }
 
 build() {
-  _kernver="$(cat /usr/lib/modules/$_extramodules/version || true)"
 
   cd "$_pkgname-$pkgver"
 
@@ -49,7 +48,7 @@ build() {
 
 package() {
   cd "$_pkgname-$pkgver"
-  install -Dm644 src/*.ko -t "$pkgdir/usr/lib/modules/$_extramodules/"
+  install -Dm644 src/*.ko -t "$pkgdir/usr/lib/modules/${_kernver}/extramodules/"
   find "$pkgdir" -name '*.ko' -exec strip --strip-debug {} +
   find "$pkgdir" -name '*.ko' -exec xz {} +
 
@@ -58,5 +57,5 @@ package() {
 #    install -Dm644 /dev/stdin "$pkgdir/usr/lib/modprobe.d/$pkgname.conf"
 
   # set the kernel we've built for inside the install script
-  sed -i -e "s/EXTRAMODULES=.*/EXTRAMODULES=${_extramodules}/g" "${startdir}/${_pkgname}.install"
+  sed -i -e "s/EXTRAMODULES=.*/EXTRAMODULES=${_kernver}/extramodules/g" "${startdir}/${_pkgname}.install"
 }
